@@ -1,0 +1,52 @@
+name: Deploy Widget to AWS S3 Only
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/with-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies and Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
+
+      - name: Extract version from package.json
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          MAJOR="v$(echo $VERSION | cut -d. -f1)"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "MAJOR=$MAJOR" >> $GITHUB_ENV
+
+      - name: Upload Immutable Version to S3
+        run: |
+          aws s3 cp dist/${{ env.VERSION }}/external-script-integration.js s3://${{ secrets.AWS_S3_BUCKET }}/${{ env.VERSION }}/external-script-integration.js \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "application/javascript"
+
+      - name: Upload Live Alias Version to S3
+        run: |
+          aws s3 cp dist/${{ env.MAJOR }}/external-script-integration.js s3://${{ secrets.AWS_S3_BUCKET }}/${{ env.MAJOR }}/external-script-integration.js \
+            --cache-control "no-cache, must-revalidate" \
+            --content-type "application/javascript"
