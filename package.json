@@ -1,7 +1,7 @@
 {
   "name": "external-script-integration",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Embeddable feedback widget for external websites with Shadow DOM isolation and CDN versioning",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
